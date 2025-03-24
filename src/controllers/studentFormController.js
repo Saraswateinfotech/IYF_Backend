@@ -52,7 +52,7 @@ exports.saveStudentData = (req, res) => {
   });
 };
 
-//  GET - Get all students
+//  GET - Get all  students
 exports.getAllStudents = (req, res) => {
   const sql = `SELECT * FROM users ORDER BY registration_date DESC`;
 
