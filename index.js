@@ -1,9 +1,9 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const authRoutes = require("./routes/authRoutes");
-const studentFormRoutes = require("./routes/studentFormRoutes");
-const db = require("./config/db");
+const authRoutes = require("./src/routes/authRoutes");
+const studentFormRoutes = require("./src/routes/studentFormRoutes");
+const db = require("./src/config/db");
 
 
 
