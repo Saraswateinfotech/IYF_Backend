@@ -163,9 +163,11 @@ exports.updateStudentStatus = (req, res) => {
     return res.status(400).json({ message: 'Invalid student_status value' });
   }
 
-  const sql = 'UPDATE users SET student_status = ? WHERE user_id = ?';
+  const currentDate = new Date(); // Get current date-time
 
-  db.query(sql, [student_status, user_id], (err, result) => {
+  const sql = 'UPDATE users SET student_status = ?, student_status_date = ? WHERE user_id = ?';
+
+  db.query(sql, [student_status, currentDate, user_id], (err, result) => {
     if (err) {
       console.error('Error updating student_status:', err);
       return res.status(500).json({ message: 'Database error' });
@@ -175,11 +177,9 @@ exports.updateStudentStatus = (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({ message: 'Student status updated successfully' });
+    res.json({ message: 'Student status and date updated successfully' });
   });
 };
-
-
 
 exports.updatePaymentStatusByUserId = (req, res) => {
   const { user_id, payment_status } = req.body;
