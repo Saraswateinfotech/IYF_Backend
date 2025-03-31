@@ -3,8 +3,9 @@ const db = require("../config/db");
 
 //  post - post students
 exports.saveStudentData = (req, res) => {
+  debugger
   const {
-    name, dob, mobile_number, frontliner_id, profession, address,
+    name, dob, mobile_number, frontliner_id, calling_id, profession, address,
     class_mode, payment_mode, payment_amount, payment_status,
     referral_user_id = null, chanting_round = 0, email = null, photo = null,
     rating = 0, services = null, city = null, state = null,
@@ -21,7 +22,7 @@ exports.saveStudentData = (req, res) => {
 
   const values = [
     getValueOrNull(name), getValueOrNull(dob), getValueOrNull(mobile_number),
-    getValueOrNull(frontliner_id), getValueOrNull(profession), getValueOrNull(address),
+    getValueOrNull(frontliner_id), getValueOrNull(calling_id), getValueOrNull(profession), getValueOrNull(address),
     getValueOrNull(class_mode), getValueOrNull(payment_mode), getValueOrNull(payment_amount),
     getValueOrNull(payment_status), getValueOrNull(referral_user_id), getValueOrNull(chanting_round),
     getValueOrNull(email), getValueOrNull(photo), getValueOrNull(rating), getValueOrNull(services),
@@ -34,16 +35,17 @@ exports.saveStudentData = (req, res) => {
 
   const insertSql = `
     INSERT INTO users (
-      name, dob, mobile_number, frontliner_id, profession, address,
+      name, dob, mobile_number, frontliner_id, calling_id, profession, address,
       class_mode, payment_mode, payment_amount, payment_status, referral_user_id,
       chanting_round, email, photo, rating, services, city, state, permanent_address,
       remark, skill, comment, interest, hobby, study_field, father_occupation,
       father_number, sankalp_camp, gender, student_status, facilitator_id,
       razorpay_payment_id, registration_date
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(insertSql, values, (err, result) => {
+    debugger
     if (err) {
       console.error("Insert Error:", err);
       return res.status(500).json({ error: "Error inserting student data", details: err });
@@ -51,6 +53,28 @@ exports.saveStudentData = (req, res) => {
     res.status(201).json({ message: "Student data saved successfully", insertedId: result.insertId });
   });
 };
+//  GET - Get all facilitator or frontliner
+exports.allFacilitatorOrFrontliner = (req, res) => {
+  const query = `
+    SELECT * FROM iyfdashboardAccounts
+    WHERE role IN ('frontliner', 'facilitator')
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching users by role:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    // Remove sensitive fields (password, textpassword) from the results
+    const sanitizedResults = results.map(user => {
+      const { password, textpassword, ...sanitizedUser } = user; // Destructure and exclude sensitive fields
+      return sanitizedUser;  // Return the user without sensitive fields
+    });
+
+    res.json(sanitizedResults); // Send sanitized results
+  });
+}
 
 //  GET - Get all students
 exports.getAllStudents = (req, res) => {
@@ -134,20 +158,28 @@ exports.updateCallingId = (req, res) => {
 };
 
 exports.getUserByCallingId = (req, res) => {
-  const { calling_id } = req.params;
-  const sql = `SELECT * FROM users WHERE calling_id = ?`;
+  const { calling_id } = req.params; // calling_id को URL से प्राप्त करें
 
-  db.query(sql, [calling_id], (err, results) => {
+  // SQL Query
+  const getUserQuery = `
+    SELECT * 
+    FROM users
+    WHERE calling_id = ? 
+    AND frontliner_id != calling_id
+  `;
+
+  // Execute the query to fetch the data based on calling_id
+  db.query(getUserQuery, [calling_id], (err, result) => {
     if (err) {
-      console.error('Error fetching user:', err);
-      return res.status(500).json({ message: 'Database error' });
+      console.error("Error fetching user data:", err);
+      return res.status(500).json({ error: "Error fetching user data", details: err });
     }
 
-    if (results.length === 0) {
-      return res.status(404).json({ message: 'No users found with this calling_id' });
+    if (result.length === 0) {
+      return res.status(404).json({ message: "No data found or frontliner_id matches calling_id" });
     }
 
-    res.json(results); // 🔁 return all users with this calling_id
+    res.status(200).json({ message: "User data fetched successfully", data: result });
   });
 };
 
@@ -201,5 +233,59 @@ exports.updatePaymentStatusByUserId = (req, res) => {
     }
 
     res.status(200).json({ message: 'Payment status updated successfully' });
+  });
+};
+
+
+exports.getUserByFrontlinerAndCallingId = (req, res) => {
+  const { frontliner_id, calling_id } = req.params; // frontliner_id और calling_id को URL से प्राप्त करें
+
+  // SQL Query
+  const getUserQuery = `
+    SELECT * 
+    FROM users
+    WHERE frontliner_id = ? 
+    AND calling_id = ?
+  `;
+
+  // Execute the query to fetch the data based on both frontliner_id and calling_id
+  db.query(getUserQuery, [frontliner_id, calling_id], (err, result) => {
+    if (err) {
+      console.error("Error fetching user data:", err);
+      return res.status(500).json({ error: "Error fetching user data", details: err });
+    }
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "No data found with matching frontliner_id and calling_id" });
+    }
+
+    res.status(200).json({ message: "User data fetched successfully", data: result });
+  });
+};
+
+
+exports.frontlinerStudentByIdOfcallingId = (req, res) => {
+  const { frontliner_id } = req.params; 
+
+  // SQL Query to fetch data where frontliner_id and calling_id are the same
+  const getUserQuery = `
+    SELECT * 
+    FROM users
+    WHERE frontliner_id = ? 
+    AND calling_id = ?
+  `;
+
+  // Execute the query to fetch the data based on frontliner_id
+  db.query(getUserQuery, [frontliner_id, frontliner_id], (err, result) => {
+    if (err) {
+      console.error("Error fetching user data:", err);
+      return res.status(500).json({ error: "Error fetching user data", details: err });
+    }
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "No data found where frontliner_id and calling_id are the same" });
+    }
+
+    res.status(200).json({ message: "User data fetched successfully", data: result });
   });
 };
