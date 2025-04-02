@@ -238,7 +238,7 @@ exports.updatePaymentStatusByUserId = (req, res) => {
 
 
 exports.getUserByFrontlinerAndCallingId = (req, res) => {
-  const { frontliner_id, calling_id } = req.params; // frontliner_id और calling_id को URL से प्राप्त करें
+  const { frontliner_id, calling_id } = req.params; 
 
   // SQL Query
   const getUserQuery = `
@@ -262,7 +262,6 @@ exports.getUserByFrontlinerAndCallingId = (req, res) => {
     res.status(200).json({ message: "User data fetched successfully", data: result });
   });
 };
-
 
 exports.frontlinerStudentByIdOfcallingId = (req, res) => {
   const { frontliner_id } = req.params; 
