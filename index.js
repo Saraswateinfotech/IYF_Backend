@@ -21,7 +21,7 @@
 
     app.use("/auth", authRoutes);
     app.use("/students", studentFormRoutes);
-    app.use("/dashboard", dashboardRoutes);
+    app.use("/dashboar", dashboardRoutes);
     app.use("/batch", batchRoutes);
 
 

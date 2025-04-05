@@ -13,7 +13,7 @@ exports.saveStudentData = (req, res) => {
     interest = null, hobby = null, study_field = null,
     father_occupation = null, father_number = null,
     sankalp_camp = 0, gender = null, student_status = null,
-    facilitator_id = null, razorpay_payment_id = null
+    facilitator_id = null, razorpay_payment_id = null, group_name = "New Student"
   } = req.body;
 
   const getValueOrNull = (value) => {
@@ -30,7 +30,7 @@ exports.saveStudentData = (req, res) => {
     getValueOrNull(skill), getValueOrNull(comment), getValueOrNull(interest), getValueOrNull(hobby),
     getValueOrNull(study_field), getValueOrNull(father_occupation), getValueOrNull(father_number),
     getValueOrNull(sankalp_camp), getValueOrNull(gender), getValueOrNull(student_status),
-    getValueOrNull(facilitator_id), getValueOrNull(razorpay_payment_id), new Date()
+    getValueOrNull(facilitator_id), getValueOrNull(razorpay_payment_id), getValueOrNull(group_name), new Date()
   ];
 
   const insertSql = `
@@ -41,7 +41,7 @@ exports.saveStudentData = (req, res) => {
       remark, skill, comment, interest, hobby, study_field, father_occupation,
       father_number, sankalp_camp, gender, student_status, facilitator_id,
       razorpay_payment_id, registration_date
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(insertSql, values, (err, result) => {
@@ -158,7 +158,7 @@ exports.updateCallingId = (req, res) => {
 };
 
 exports.getUserByCallingId = (req, res) => {
-  const { calling_id } = req.params; // calling_id को URL से प्राप्त करें
+  const { calling_id } = req.params; 
 
   // SQL Query
   const getUserQuery = `
@@ -238,7 +238,7 @@ exports.updatePaymentStatusByUserId = (req, res) => {
 
 
 exports.getUserByFrontlinerAndCallingId = (req, res) => {
-  const { frontliner_id, calling_id } = req.params; 
+  const { frontliner_id, calling_id } = req.params; // frontliner_id और calling_id को URL से प्राप्त करें
 
   // SQL Query
   const getUserQuery = `
@@ -262,6 +262,7 @@ exports.getUserByFrontlinerAndCallingId = (req, res) => {
     res.status(200).json({ message: "User data fetched successfully", data: result });
   });
 };
+
 
 exports.frontlinerStudentByIdOfcallingId = (req, res) => {
   const { frontliner_id } = req.params; 
