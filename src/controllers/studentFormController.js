@@ -2,8 +2,62 @@
 const db = require("../config/db");
 
 //  post - post students
+// exports.saveStudentData = (req, res) => {
+//   debugger
+//   const {
+//     name, dob, mobile_number, frontliner_id, calling_id, profession, address,
+//     class_mode, payment_mode, payment_amount, payment_status,
+//     referral_user_id = null, chanting_round = 0, email = null, photo = null,
+//     rating = 0, services = null, city = null, state = null,
+//     permanent_address = null, remark = null, skill = null, comment = null,
+//     interest = null, hobby = null, study_field = null,
+//     father_occupation = null, father_number = null,
+//     sankalp_camp = 0, gender = null, student_status = null,
+//     facilitator_id = null, razorpay_payment_id = null
+//   } = req.body;
+
+//   const getValueOrNull = (value) => {
+//     return value === undefined || value === '' ? null : value;
+//   };
+
+//   const values = [
+//     getValueOrNull(name), getValueOrNull(dob), getValueOrNull(mobile_number),
+//     getValueOrNull(frontliner_id), getValueOrNull(calling_id), getValueOrNull(profession), getValueOrNull(address),
+//     getValueOrNull(class_mode), getValueOrNull(payment_mode), getValueOrNull(payment_amount),
+//     getValueOrNull(payment_status), getValueOrNull(referral_user_id), getValueOrNull(chanting_round),
+//     getValueOrNull(email), getValueOrNull(photo), getValueOrNull(rating), getValueOrNull(services),
+//     getValueOrNull(city), getValueOrNull(state), getValueOrNull(permanent_address), getValueOrNull(remark),
+//     getValueOrNull(skill), getValueOrNull(comment), getValueOrNull(interest), getValueOrNull(hobby),
+//     getValueOrNull(study_field), getValueOrNull(father_occupation), getValueOrNull(father_number),
+//     getValueOrNull(sankalp_camp), getValueOrNull(gender), getValueOrNull(student_status),
+//     getValueOrNull(facilitator_id), getValueOrNull(razorpay_payment_id), new Date()
+//   ];
+
+//   const insertSql = `
+//     INSERT INTO users (
+//       name, dob, mobile_number, frontliner_id, calling_id, profession, address,
+//       class_mode, payment_mode, payment_amount, payment_status, referral_user_id,
+//       chanting_round, email, photo, rating, services, city, state, permanent_address,
+//       remark, skill, comment, interest, hobby, study_field, father_occupation,
+//       father_number, sankalp_camp, gender, student_status, facilitator_id,
+//       razorpay_payment_id, registration_date
+//     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//   `;
+
+//   db.query(insertSql, values, (err, result) => {
+//     debugger
+//     if (err) {
+//       console.error("Insert Error:", err);
+//       return res.status(500).json({ error: "Error inserting student data", details: err });
+//     }
+//     res.status(201).json({ message: "Student data saved successfully", insertedId: result.insertId });
+//   });
+// };
+
+//  post - post students
 exports.saveStudentData = (req, res) => {
-  debugger
+  debugger;
+
   const {
     name, dob, mobile_number, frontliner_id, calling_id, profession, address,
     class_mode, payment_mode, payment_amount, payment_status,
@@ -13,8 +67,11 @@ exports.saveStudentData = (req, res) => {
     interest = null, hobby = null, study_field = null,
     father_occupation = null, father_number = null,
     sankalp_camp = 0, gender = null, student_status = null,
-    facilitator_id = null, razorpay_payment_id = null, group_name = "New Student"
+    facilitator_id = null, razorpay_payment_id = null
   } = req.body;
+
+  // ✅ Fixed group name (not coming from body)
+  const fixedGroupName = 'new';
 
   const getValueOrNull = (value) => {
     return value === undefined || value === '' ? null : value;
@@ -30,7 +87,9 @@ exports.saveStudentData = (req, res) => {
     getValueOrNull(skill), getValueOrNull(comment), getValueOrNull(interest), getValueOrNull(hobby),
     getValueOrNull(study_field), getValueOrNull(father_occupation), getValueOrNull(father_number),
     getValueOrNull(sankalp_camp), getValueOrNull(gender), getValueOrNull(student_status),
-    getValueOrNull(facilitator_id), getValueOrNull(razorpay_payment_id), getValueOrNull(group_name), new Date()
+    getValueOrNull(facilitator_id), getValueOrNull(razorpay_payment_id),
+    getValueOrNull(fixedGroupName),  
+    new Date()
   ];
 
   const insertSql = `
@@ -40,12 +99,12 @@ exports.saveStudentData = (req, res) => {
       chanting_round, email, photo, rating, services, city, state, permanent_address,
       remark, skill, comment, interest, hobby, study_field, father_occupation,
       father_number, sankalp_camp, gender, student_status, facilitator_id,
-      razorpay_payment_id, registration_date
+      razorpay_payment_id, group_name, registration_date
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(insertSql, values, (err, result) => {
-    debugger
+    debugger;
     if (err) {
       console.error("Insert Error:", err);
       return res.status(500).json({ error: "Error inserting student data", details: err });
@@ -53,6 +112,7 @@ exports.saveStudentData = (req, res) => {
     res.status(201).json({ message: "Student data saved successfully", insertedId: result.insertId });
   });
 };
+
 //  GET - Get all facilitator or frontliner
 exports.allFacilitatorOrFrontliner = (req, res) => {
   const query = `
@@ -287,5 +347,60 @@ exports.frontlinerStudentByIdOfcallingId = (req, res) => {
     }
 
     res.status(200).json({ message: "User data fetched successfully", data: result });
+  });
+};
+
+exports.getUsersByBatchId = (req, res) => {
+  const { batch_id } = req.params;
+
+  if (!batch_id) {
+    return res.status(400).json({ message: "Batch ID is required" });
+  }
+
+  const query = `
+    SELECT * FROM users WHERE batch_id = ?
+  `;
+
+  db.query(query, [batch_id], (err, results) => {
+    if (err) {
+      console.error("Error fetching users by batch_id:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    return res.status(200).json({ users: results });
+  });
+};
+
+
+
+// getUserById not need this time
+
+exports.getUserById = (req, res) => {
+  const { user_id } = req.params;  // Retrieve user_id from the URL parameter
+
+  // Check if user_id is provided
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  // SQL query to fetch user by user_id
+  const query = `
+    SELECT * FROM users WHERE user_id = ?
+  `;
+
+  // Query the database with the user_id
+  db.query(query, [user_id], (err, results) => {
+    if (err) {
+      console.error("Error fetching user by user_id:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    // If no user is found
+    if (results.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return the user details in response
+    return res.status(200).json({ user: results[0] });
   });
 };

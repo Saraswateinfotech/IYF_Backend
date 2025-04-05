@@ -13,7 +13,6 @@ exports.getDashboardReport = (req, res) => {
   });
 };
 
-
 exports.getFrontlinerdetailReport =(req, res) => {
     const { callingId } = req.params;
   

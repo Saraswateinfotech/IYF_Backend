@@ -40,6 +40,7 @@ exports.getAllBatches = (req, res) => {
         b.GroupName,
         b.BatchCreatedDate,
         b.Status,
+        b.is_start,
         b.FacilitatorId,
         a.name AS FacilitatorName
       FROM studentbatch b
@@ -60,83 +61,66 @@ exports.getAllBatches = (req, res) => {
 
 
 // GET /batchesbyfacilitatorId
-exports.getBatchesByfacilitatorId = (req, res) => {
-  const { facilitatorId } = req.params;
+// exports.getBatchesByfacilitatorId = (req, res) => {
+//   const { facilitatorId } = req.params;
 
-  const query = `
-    SELECT BatchId, GroupName, BatchCreatedDate, Status, FacilitatorId
-    FROM studentbatch
-    WHERE FacilitatorId = ?`;
+//   const query = `
+//     SELECT BatchId, GroupName,is_start, BatchCreatedDate, Status, FacilitatorId
+//     FROM studentbatch
+//     WHERE FacilitatorId = ?`;
 
-  db.query(query, [facilitatorId], (err, results) => {
-    if (err) {
-      console.error('Error fetching batches:', err);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
+//   db.query(query, [facilitatorId], (err, results) => {
+//     if (err) {
+//       console.error('Error fetching batches:', err);
+//       return res.status(500).json({ error: 'Internal server error' });
+//     }
 
-    res.json(results);
-  });
-}
+//     res.json(results);
+//   });
+// }
 
-exports.attendanceSession = (req, res) => {
-  let attendances = [];
+  exports.getBatchesByfacilitatorId = (req, res) => {
+    const { facilitatorId } = req.params;
 
-  // Check if the request body contains an array under "attendances"
-  if (req.body.attendances && Array.isArray(req.body.attendances)) {
-    attendances = req.body.attendances;
-  } 
-  // Otherwise, check for individual record fields (allowing both lower-case and capitalized keys)
-  else if (
-    (req.body.Attendsessoin || req.body.AttendanceSession) &&
-    (req.body.studentId || req.body.StudentId)
-  ) {
-    attendances.push({
-      AttendanceSession: req.body.Attendsessoin || req.body.AttendanceSession,
-      StudentId: req.body.studentId || req.body.StudentId
+    const query = `
+      SELECT 
+        b.BatchId,
+        b.GroupName,
+        b.is_start,
+        b.BatchCreatedDate,
+        b.Status,
+        b.FacilitatorId,
+        a.name AS FacilitatorName
+      FROM studentbatch b
+      LEFT JOIN iyfdashboardAccounts a ON b.FacilitatorId = a.user_id
+      WHERE b.FacilitatorId = ?`;
+
+    db.query(query, [facilitatorId], (err, results) => {
+      if (err) {
+        console.error('Error fetching batches:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      res.json(results);
     });
-  } else {
-    return res.status(400).json({ error: "Missing required fields." });
+  };
+
+// put updateIsStart 
+exports.updateIsStart = async (req, res) => {
+  const { batchId, isStart } = req.body;
+
+  if (typeof batchId === 'undefined' || typeof isStart === 'undefined') {
+    return res.status(400).json({ message: 'batchId and isStart are required' });
   }
 
-  // Prepare bulk insert query parts
-  const placeholders = [];
-  const values = [];
+  const query = `UPDATE studentbatch SET is_start = ? WHERE BatchId = ?`;
 
-  for (const record of attendances) {
-    // Use both naming conventions for session and studentId
-    const session = record.Attendsessoin || record.AttendanceSession;
-    const studentId = record.studentId || record.StudentId;
-
-    // Validate required fields for each record
-    if (!session || !studentId) {
-      return res.status(400).json({ error: "Missing required fields in one or more records." });
-    }
-    
-    // Build placeholders and collect values (only AttendanceSession and StudentId)
-    placeholders.push("(?, ?)");
-    values.push(session, studentId);
-  }
-
-  // Construct the bulk insert SQL query (AttendanceDate is omitted since it's auto-generated)
-  const insertSql = `
-    INSERT INTO studentAttendance (AttendanceSession, StudentId)
-    VALUES ${placeholders.join(", ")}
-  `;
-
-  // Execute the insert query
-  db.query(insertSql, values, (err, result) => {
+  db.query(query, [isStart ? 1 : 0, batchId], (err, result) => {
     if (err) {
-      console.error("Insert Error:", err);
-      return res.status(500).json({
-        error: "Error inserting attendance record(s)",
-        details: err
-      });
+      console.error('Error updating batch:', err);
+      return res.status(500).json({ message: 'Internal server error' });
     }
-    res.status(201).json({
-      message: "Attendance record(s) saved successfully",
-      insertedId: result.insertId
-    });
+
+    res.status(200).json({ message: 'Batch is_start updated successfully' });
   });
 };
-
-

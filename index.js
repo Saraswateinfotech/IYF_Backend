@@ -5,6 +5,7 @@
     const studentFormRoutes = require("./src/routes/studentFormRoutes");
     const dashboardRoutes = require("./src/routes/dashboardRoutes");
     const batchRoutes = require("./src/routes/batchRoutes");
+    const attendanceRoutes = require("./src/routes/attendanceRoutes");
     const db = require("./src/config/db");
 
 
@@ -21,8 +22,9 @@
 
     app.use("/auth", authRoutes);
     app.use("/students", studentFormRoutes);
-    app.use("/dashboar", dashboardRoutes);
+    app.use("/dashboard", dashboardRoutes);
     app.use("/batch", batchRoutes);
+    app.use("/attendance", attendanceRoutes);
 
 
     app.get('/', (req, res) => {
