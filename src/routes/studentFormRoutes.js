@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
-const { saveStudentData, getAllStudents, updateStudentById, getUsersByFrontlinerId, updateCallingId, getUserByCallingId, updateStudentStatus, updatePaymentStatusByUserId, allFacilitatorOrFrontliner, frontlinerStudentByIdOfcallingId,getUsersByBatchId, getUserById} = require("../controllers/studentFormController");
+const { saveStudentData, getAllStudents, updateStudentById, getUsersByFrontlinerId, updateCallingId, getUserByCallingId, updateStudentStatus, updatePaymentStatusByUserId, allFacilitatorOrFrontliner, frontlinerStudentByIdOfcallingId,getUsersByBatchId, getUserById, getGroupUserCount} = require("../controllers/studentFormController");
 
 
 
@@ -16,6 +16,7 @@ router.post('/update-student-status',authMiddleware, updateStudentStatus);
 router.post('/update-payment-status',authMiddleware, updatePaymentStatusByUserId);
 router.get("/allFacilitatorOrFrontliner", authMiddleware, allFacilitatorOrFrontliner);
 router.get('/batch/:batch_id', authMiddleware,getUsersByBatchId);
+router.post('/getGroupUserCount',authMiddleware, getGroupUserCount);
 router.get('/getStudent/:user_id', authMiddleware,getUserById);
 
 
