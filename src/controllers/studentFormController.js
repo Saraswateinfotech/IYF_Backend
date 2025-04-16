@@ -379,23 +379,23 @@ exports.getGroupUserCount = (req, res) => {
     return res.status(400).json({ message: "Facilitator ID is required" });
   }
 
-  const groupList = [
-    'DYS', 'Jagganath', 'Nachiketa', 'Shadev',
-    'Nakul', 'Arjun', 'GourangSabha', 'Bhima'
-  ];
+  const query = `
+    SELECT 
+      CASE 
+        WHEN group_name LIKE 'DYS%' THEN 'DYS'
+        ELSE group_name
+      END AS group_name,
+      COUNT(*) AS total_users
+    FROM users
+    WHERE facilitatorId = ?
+    GROUP BY 
+      CASE 
+        WHEN group_name LIKE 'DYS%' THEN 'DYS'
+        ELSE group_name
+      END;
+  `;
 
-  // Prepare multiple SELECTs with UNION ALL
-  const unionQueries = groupList.map(group => {
-    return `
-      SELECT '${group}' AS group_name, COUNT(*) AS total_users
-      FROM users
-      WHERE facilitator_id = ? AND group_name LIKE '${group}%'
-    `;
-  }).join(' UNION ALL ');
-
-  const params = new Array(groupList.length).fill(facilitatorId);
-
-  db.query(unionQueries, params, (err, results) => {
+  db.query(query, [facilitatorId], (err, results) => {
     if (err) {
       console.error("Error fetching group user count:", err);
       return res.status(500).json({ message: "Internal server error" });
@@ -404,8 +404,6 @@ exports.getGroupUserCount = (req, res) => {
     return res.status(200).json(results);
   });
 };
-
-
 
 // getUserById not need this time
 

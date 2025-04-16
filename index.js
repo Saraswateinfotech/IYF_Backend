@@ -6,6 +6,7 @@
     const dashboardRoutes = require("./src/routes/dashboardRoutes");
     const batchRoutes = require("./src/routes/batchRoutes");
     const attendanceRoutes = require("./src/routes/attendanceRoutes");
+    const migrationRoutes = require("./src/routes/migrationRoutes");
     const db = require("./src/config/db");
 
 
@@ -22,9 +23,10 @@
 
     app.use("/auth", authRoutes);
     app.use("/students", studentFormRoutes);
-    app.use("/dashboard", dashboardRoutes);
+    app.use("/dashboar", dashboardRoutes);
     app.use("/batch", batchRoutes);
     app.use("/attendance", attendanceRoutes);
+    app.use("/groupMigration", migrationRoutes);
 
 
     app.get('/', (req, res) => {
