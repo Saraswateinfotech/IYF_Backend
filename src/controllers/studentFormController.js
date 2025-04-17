@@ -308,7 +308,7 @@ exports.getUserByFrontlinerAndCallingId = (req, res) => {
     AND calling_id = ?
   `;
 
-  // Execute the query to fetch the data based on both frontliner_id and  calling_id
+  // Execute the query to fetch the data based on both frontliner_id and calling_id
   db.query(getUserQuery, [frontliner_id, calling_id], (err, result) => {
     if (err) {
       console.error("Error fetching user data:", err);
