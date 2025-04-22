@@ -1,7 +1,5 @@
 const db = require("../config/db");
 
-
-
 exports.markAttendance = (req, res) => {
   let { AttendanceSession, StudentId } = req.body;
 
@@ -13,11 +11,11 @@ exports.markAttendance = (req, res) => {
 
   // Step 1: Define shifting logic
   const groupShiftMap = {
-    'DYS-1': 'DYS-2',
-    'DYS-2': 'DYS-3',
-    'DYS-3': 'DYS-4',
-    'DYS-4': 'DYS-5',
-    'DYS-5': 'DYS-6',
+    "DYS-1": "DYS-2",
+    "DYS-2": "DYS-3",
+    "DYS-3": "DYS-4",
+    "DYS-4": "DYS-5",
+    "DYS-5": "DYS-6",
   };
 
   let updatedSession;
@@ -70,21 +68,25 @@ exports.markAttendance = (req, res) => {
           WHERE user_id = ?
         `;
 
-        db.query(updateUserQuery, [BatchId, FacilitatorId, StudentId], (updateErr) => {
-          if (updateErr) {
-            console.error("Error updating user data:", updateErr);
-            return res.status(500).json({ message: "Internal server error" });
+        db.query(
+          updateUserQuery,
+          [BatchId, FacilitatorId, StudentId],
+          (updateErr) => {
+            if (updateErr) {
+              console.error("Error updating user data:", updateErr);
+              return res.status(500).json({ message: "Internal server error" });
+            }
+
+            return res.status(201).json({
+              message:
+                "Attendance marked, new user group set to DYS-1, batch/facilitator assigned",
+              AttendanceId: result.insertId,
+              BatchId,
+              FacilitatorId,
+            });
           }
-
-          return res.status(201).json({
-            message: "Attendance marked, new user group set to DYS-1, batch/facilitator assigned",
-            AttendanceId: result.insertId,
-            BatchId,
-            FacilitatorId,
-          });
-        });
+        );
       });
-
     } else {
       // Step 5: For existing users, update group_name as per session map
       const updateUserGroupQuery = `
@@ -93,18 +95,24 @@ exports.markAttendance = (req, res) => {
         WHERE user_id = ?
       `;
 
-      db.query(updateUserGroupQuery, [updatedSession, StudentId], (groupErr) => {
-        if (groupErr) {
-          console.error("Error updating user group:", groupErr);
-          return res.status(500).json({ message: "Failed to update user group." });
-        }
+      db.query(
+        updateUserGroupQuery,
+        [updatedSession, StudentId],
+        (groupErr) => {
+          if (groupErr) {
+            console.error("Error updating user group:", groupErr);
+            return res
+              .status(500)
+              .json({ message: "Failed to update user group." });
+          }
 
-        return res.status(201).json({
-          message: "Attendance marked and user group updated",
-          AttendanceId: result.insertId,
-          UsedSession: updatedSession,
-        });
-      });
+          return res.status(201).json({
+            message: "Attendance marked and user group updated",
+            AttendanceId: result.insertId,
+            UsedSession: updatedSession,
+          });
+        }
+      );
     }
   });
 };
@@ -113,7 +121,9 @@ exports.updateStudentGroupWise = (req, res) => {
   const { user_id, newGroupName } = req.body;
 
   if (!user_id || !newGroupName) {
-    return res.status(400).json({ message: 'userId and newGroupName are required' });
+    return res
+      .status(400)
+      .json({ message: "userId and newGroupName are required" });
   }
 
   const query = `
@@ -128,8 +138,8 @@ exports.updateStudentGroupWise = (req, res) => {
       return res.status(500).json({ message: "Internal Server Error" });
     }
 
-    return res.status(200).json({ message: "Group name updated successfully" });
-  });
+    return res.status(200).json({ message: "Group name updated successfully" });
+  });
 };
 
 // exports.getStudentGroupWise = (req, res) => {
@@ -150,7 +160,7 @@ exports.updateStudentGroupWise = (req, res) => {
 //   const groupSearch = groupname + '%';
 
 //   // console.log(groupSearch)
-  
+
 //   db.query(query, [facilitatorId, groupSearch], (err, results) => {
 //     if (err) {
 //       console.error("Error fetching users by frontliner_id:", err);
@@ -161,99 +171,146 @@ exports.updateStudentGroupWise = (req, res) => {
 //   });
 // };
 
+// exports.getFrontlinerdetailReport = (req, res) => {
+//   const { facilitatorId, group_name } = req.body;
+
+//   if (!facilitatorId || !group_name) {
+//     return res
+//       .status(400)
+//       .json({ message: "facilitatorId and groupname are required" });
+//   }
+
+//   db.query(
+//     "CALL progressReportGroupWise(?, ?)",
+//     [facilitatorId, group_name],
+//     (err, results) => {
+//       if (err) {
+//         console.error("Error calling progressReportGroupWise:", err);
+//         return res.status(500).json({ error: "Database error" });
+//       }
+//       res.json(results[0]);
+//     }
+//   );
+// };
+
 
 exports.getFrontlinerdetailReport = (req, res) => {
-  const { facilitatorId, group_name } = req.body;
+  const { facilitatorId, groupPrefix, sessionName, selectedYear, selectedMonth } = req.body;
 
-  if (!facilitatorId || !group_name) {
-    return res.status(400).json({ message: "facilitatorId and groupname are required" });
+  if (!facilitatorId || !groupPrefix || !sessionName || !selectedYear || !selectedMonth) {
+    return res.status(400).json({ message: "All parameters are required" });
   }
 
-  db.query("CALL progressReportGroupWise(?, ?)", [facilitatorId, group_name], (err, results) => {
+  db.query(
+    "CALL progressReportGroupWise(?, ?, ?, ?, ?)",
+    [sessionName, selectedYear, selectedMonth, facilitatorId, groupPrefix],
+    (err, results) => {
+      if (err) {
+        console.error("Error calling progressReportGroupWise:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      res.json(results[0]);
+    }
+  );
+};
+
+exports.getStudentClassReport = (req, res) => {
+  const { user_id } = req.body; // ✅ reading from body now
+
+  if (!user_id) {
+    return res.status(400).json({ error: "user_id is required in body" });
+  }
+
+  db.query("CALL studentClassReport(?)", [user_id], (err, results) => {
     if (err) {
-      console.error('Error calling progressReportGroupWise:', err);
+      console.error("Error executing procedure:", err);
       return res.status(500).json({ error: "Database error" });
     }
     res.json(results[0]);
   });
 };
 
-
-
-
-
-exports.getStudentClassReport = (req, res) => {
-  const { user_id } = req.body; // ✅ reading from body now
-
-  if (!user_id) {
-    return res.status(400).json({ error: 'user_id is required in body' });
-  }
-
-  db.query('CALL studentClassReoport(?)', [user_id], (err, results) => {
-    if (err) {
-      console.error('Error executing procedure:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(results[0]);
-  });
-};
-
-
 exports.getStudentReport = (req, res) => {
   const { groupName, month, year } = req.body;
 
   const getStudentReportQuery = `
-    SELECT 
-        u.facilitatorId,
-        ida.name AS facilitator_name,      
-        ida.phone_number,                   
-        DATE(sa.AttendanceDate) AS class_date,
-        COUNT(DISTINCT sa.StudentId) AS attendance_count,
-        total.total_students,
-        CONCAT(
-             CAST(COUNT(DISTINCT sa.StudentId) AS CHAR),
-             '/',
-             CAST(total.total_students AS CHAR)
-        ) AS attendance_ratio
-    FROM 
-        users u
-    JOIN 
-        studentAttendance sa 
+    WITH
+      -- 1) all class dates in the given month/year for the specified session
+      class_dates AS (
+        SELECT DISTINCT
+          DATE(sa.AttendanceDate) AS class_date
+        FROM studentAttendance sa
+        WHERE sa.AttendanceSession = ?
+          AND MONTH(sa.AttendanceDate) = ?
+          AND YEAR(sa.AttendanceDate) = ?
+      ),
+
+      -- 2) all facilitators in that group + their total student count
+      facilitators AS (
+        SELECT
+          u.facilitatorId,
+          ida.name         AS facilitator_name,
+          ida.phone_number,
+          COUNT(*)         AS total_students
+        FROM users u
+        JOIN iyfdashboardAccounts ida
+          ON u.facilitatorId = ida.user_id
+        WHERE u.group_name = ?
+        GROUP BY
+          u.facilitatorId,
+          ida.name,
+          ida.phone_number
+      ),
+
+      -- 3) raw attendance counts per facilitator × date
+      attendance_raw AS (
+        SELECT
+          u.facilitatorId,
+          DATE(sa.AttendanceDate) AS class_date,
+          COUNT(DISTINCT sa.StudentId) AS attendance_count
+        FROM users u
+        JOIN studentAttendance sa
           ON u.user_id = sa.StudentId
-    JOIN 
-        iyfdashboardAccounts ida 
-          ON u.facilitatorId = ida.user_id  
-    LEFT JOIN 
-        group_migration gm 
-          ON gm.devoteeId = u.user_id 
-             AND gm.priviousGroup = ?
-    JOIN (
-        SELECT facilitatorId, COUNT(*) AS total_students
-        FROM users
-        WHERE group_name = ?
-        GROUP BY facilitatorId
-    ) total ON total.facilitatorId = u.facilitatorId
-    WHERE 
-        u.group_name = ?
-        AND MONTH(sa.AttendanceDate) = ?
-        AND YEAR(sa.AttendanceDate) = ?  
-        AND (gm.migrationDateTime IS NULL OR sa.AttendanceDate < gm.migrationDateTime)
-    GROUP BY 
-        u.facilitatorId,
-        ida.name,
-        ida.phone_number,
-        DATE(sa.AttendanceDate), 
-        gm.migrationDateTime, 
-        gm.currentGroup,
-        total.total_students
-    ORDER BY 
-        DATE(sa.AttendanceDate);
+        LEFT JOIN group_migration gm
+          ON gm.devoteeId    = u.user_id
+         AND gm.priviousGroup = ?
+        WHERE u.group_name = ?
+          AND MONTH(sa.AttendanceDate) = ?
+          AND YEAR(sa.AttendanceDate) = ?
+          AND (gm.migrationDateTime IS NULL
+               OR sa.AttendanceDate < gm.migrationDateTime)
+        GROUP BY
+          u.facilitatorId,
+          DATE(sa.AttendanceDate)
+      )
+
+    -- 4) build the full facilitator × date grid, fill missing with zero
+    SELECT
+      f.facilitatorId,
+      f.facilitator_name,
+      f.phone_number,
+      cd.class_date,
+      COALESCE(ar.attendance_count, 0) AS attendance_count,
+      f.total_students,
+      CONCAT(
+        COALESCE(ar.attendance_count, 0),
+        '/',
+        f.total_students
+      ) AS attendance_ratio
+    FROM facilitators f
+    CROSS JOIN class_dates cd
+    LEFT JOIN attendance_raw ar
+      ON ar.facilitatorId = f.facilitatorId
+     AND ar.class_date     = cd.class_date
+    ORDER BY
+      cd.class_date,
+      f.facilitatorId;
   `;
 
-  // Execute query with parameters: [groupName, groupName, groupName, month, year]
+  // parameters: [session, month, year, groupName, groupName, groupName, month, year]
   db.query(
     getStudentReportQuery,
-    [groupName, groupName, groupName, month, year],
+    [groupName, month, year, groupName, groupName, groupName, month, year],
     (err, result) => {
       if (err) {
         console.error("Error fetching student report:", err);
@@ -262,13 +319,7 @@ exports.getStudentReport = (req, res) => {
           .json({ error: "Error fetching student report", details: err });
       }
 
-      if (result.length === 0) {
-        return res
-          .status(404)
-          .json({ message: "No data found for the provided parameters" });
-      }
-
-   
+      // even if result is empty, we still return an empty array instead of 404:
       const groupedData = {};
       result.forEach((row) => {
         if (!groupedData[row.facilitatorId]) {
@@ -287,7 +338,6 @@ exports.getStudentReport = (req, res) => {
         });
       });
 
-    
       const finalResponse = Object.values(groupedData);
 
       res.status(200).json({
@@ -297,4 +347,3 @@ exports.getStudentReport = (req, res) => {
     }
   );
 };
-
