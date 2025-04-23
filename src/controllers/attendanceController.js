@@ -88,7 +88,7 @@ exports.markAttendance = (req, res) => {
         );
       });
     } else {
-      // Step 5:  For existing users, update group_name as per session map
+      // Step 5: For existing users, update group_name as per session map
       const updateUserGroupQuery = `
         UPDATE users
         SET group_name = ?

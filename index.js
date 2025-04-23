@@ -23,7 +23,7 @@
 
     app.use("/auth", authRoutes);
     app.use("/students", studentFormRoutes);
-    app.use("/dashboard", dashboardRoutes);
+    app.use("/dashboar", dashboardRoutes);
     app.use("/batch", batchRoutes);
     app.use("/attendance", attendanceRoutes);
     app.use("/groupMigration", migrationRoutes);
