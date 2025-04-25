@@ -70,7 +70,7 @@ exports.saveStudentData = (req, res) => {
     facilitator_id = null, razorpay_payment_id = null
   } = req.body;
 
-  // ✅ Fixed group name  (not coming from body)
+  // ✅ Fixed group name (not coming from body)
   const fixedGroupName = 'new';
 
   const getValueOrNull = (value) => {
