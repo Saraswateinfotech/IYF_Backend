@@ -195,15 +195,28 @@ exports.updateStudentGroupWise = (req, res) => {
 
 
 exports.getFrontlinerdetailReport = (req, res) => {
-  const { facilitatorId, groupPrefix, sessionName, selectedYear, selectedMonth } = req.body;
+  const {
+    facilitatorId,
+    groupPrefix,
+    sessionName,
+    selectedYear,
+    selectedMonth,
+  } = req.body;
 
-  if (!facilitatorId || !groupPrefix || !sessionName || !selectedYear || !selectedMonth) {
-    return res.status(400).json({ message: "All parameters are required" });
+  // only these three are truly required
+  if (!facilitatorId || !groupPrefix || !sessionName) {
+    return res
+      .status(400)
+      .json({ message: "facilitatorId, groupPrefix & sessionName are required" });
   }
+
+  // if year/month are missing (undefined/null/empty), pass null to the SP
+  const yearParam  = selectedYear != null && selectedYear !== "" ? selectedYear : null;
+  const monthParam = selectedMonth != null && selectedMonth !== "" ? selectedMonth : null;
 
   db.query(
     "CALL progressReportGroupWise(?, ?, ?, ?, ?)",
-    [sessionName, selectedYear, selectedMonth, facilitatorId, groupPrefix],
+    [sessionName, yearParam, monthParam, facilitatorId, groupPrefix],
     (err, results) => {
       if (err) {
         console.error("Error calling progressReportGroupWise:", err);
@@ -213,6 +226,7 @@ exports.getFrontlinerdetailReport = (req, res) => {
     }
   );
 };
+
 
 exports.getStudentClassReport = (req, res) => {
   const { user_id } = req.body; // ✅ reading from body now
