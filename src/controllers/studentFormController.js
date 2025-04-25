@@ -70,7 +70,7 @@ exports.saveStudentData = (req, res) => {
     facilitator_id = null, razorpay_payment_id = null
   } = req.body;
 
-  // ✅ Fixed group name  (not coming from body)
+  // ✅ Fixed group name (not coming from body)
   const fixedGroupName = 'new';
 
   const getValueOrNull = (value) => {
@@ -325,25 +325,22 @@ exports.getUserByFrontlinerAndCallingId = (req, res) => {
 
 
 exports.frontlinerStudentByIdOfcallingId = (req, res) => {
-  const { frontliner_id } = req.params; 
+  const { frontliner_id } = req.params;
 
-  // SQL Query to fetch data where frontliner_id and calling_id are the same
   const getUserQuery = `
     SELECT * 
     FROM users
-    WHERE frontliner_id = ? 
-    AND calling_id = ?
+    WHERE calling_id = ?
   `;
 
-  // Execute the query to fetch the data based on frontliner_id
-  db.query(getUserQuery, [frontliner_id, frontliner_id], (err, result) => {
+  db.query(getUserQuery, [frontliner_id], (err, result) => {
     if (err) {
       console.error("Error fetching user data:", err);
       return res.status(500).json({ error: "Error fetching user data", details: err });
     }
 
     if (result.length === 0) {
-      return res.status(404).json({ message: "No data found where frontliner_id and calling_id are the same" });
+      return res.status(404).json({ message: "No users found for the given frontliner_id in calling_id" });
     }
 
     res.status(200).json({ message: "User data fetched successfully", data: result });
