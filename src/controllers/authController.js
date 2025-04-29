@@ -5,12 +5,101 @@ const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Utility function to generate a random 6-digit number
+// // Utility function to generate a random 6-digit number
+// const generateRandomDigits = (length = 6) => {
+//   return Math.floor(100000 + Math.random() * 900000).toString();
+// };
+
+// // Utility function to generate a unique userId
+// const generateUserId = async (name) => {
+//   const namePart = name.substring(0, 3).toUpperCase().padEnd(3, "X");
+//   let userId;
+//   let isUnique = false;
+
+//   while (!isUnique) {
+//     const randomDigits = generateRandomDigits();
+//     userId = `${namePart}${randomDigits}`;
+//     isUnique = await isUserIdUnique(userId);
+//   }
+
+//   return userId;
+// };
+
+// // Function to check if userId already exists
+// const isUserIdUnique = (userId) => {
+//   return new Promise((resolve, reject) => {
+//     const checkSql =
+//       "SELECT COUNT(*) as count FROM iyfdashboardAccounts WHERE user_id = ?";
+//     db.query(checkSql, [userId], (err, results) => {
+//       if (err) return reject(err);
+//       resolve(results[0].count === 0);
+//     });
+//   });
+// };
+
+// exports.signUp = async (req, res) => {
+//   const { name, phone_number, email, password, role } = req.body;
+
+//   if (!name || !phone_number || !email || !password || !role) {
+//     return res.status(400).json({ error: "All fields are required" });
+//   }
+
+//   try {
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     const userId = await generateUserId(name);
+
+//     // Check for existing user (Duplicate Entry)
+//     const checkDuplicateQuery = `SELECT * FROM iyfdashboardAccounts WHERE email = ? OR phone_number = ? OR user_id = ?`;
+//     db.query(
+//       checkDuplicateQuery,
+//       [email, phone_number, userId],
+//       (err, results) => {
+//         if (err) {
+//           return res
+//             .status(500)
+//             .json({ error: "Database error", details: err.sqlMessage });
+//         }
+
+//         if (results.length > 0) {
+//           return res.status(400).json({ error: "User already exists!" });
+//         }
+
+//         //  Insert User Data
+//         const sql = `
+//               INSERT INTO iyfdashboardAccounts (user_id, name, email, phone_number, password, textpassword, role)
+//               VALUES (?, ?, ?, ?, ?, ?, ?)
+//           `;
+
+//         db.query(
+//           sql,
+//           [userId, name, email, phone_number, hashedPassword, password, role],
+//           (err, result) => {
+//             if (err) {
+//               return res
+//                 .status(500)
+//                 .json({ error: "Database error", details: err.sqlMessage });
+//             }
+
+//             //  Ensure response is sent
+//             return res.status(201).json({
+//               message: "User registered successfully",
+//               userId: userId,
+//             });
+//           }
+//         );
+//       }
+//     );
+//   } catch (error) {
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// };
+
+
 const generateRandomDigits = (length = 6) => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Utility function to generate a unique userId
 const generateUserId = async (name) => {
   const namePart = name.substring(0, 3).toUpperCase().padEnd(3, "X");
   let userId;
@@ -25,11 +114,9 @@ const generateUserId = async (name) => {
   return userId;
 };
 
-// Function to check if userId already exists
 const isUserIdUnique = (userId) => {
   return new Promise((resolve, reject) => {
-    const checkSql =
-      "SELECT COUNT(*) as count FROM iyfdashboardAccounts WHERE user_id = ?";
+    const checkSql = "SELECT COUNT(*) as count FROM iyfdashboardAccounts WHERE user_id = ?";
     db.query(checkSql, [userId], (err, results) => {
       if (err) return reject(err);
       resolve(results[0].count === 0);
@@ -46,50 +133,62 @@ exports.signUp = async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const userId = await generateUserId(name);
 
-    // Check for existing user (Duplicate Entry)
-    const checkDuplicateQuery = `SELECT * FROM iyfdashboardAccounts WHERE email = ? OR phone_number = ? OR user_id = ?`;
-    db.query(
-      checkDuplicateQuery,
-      [email, phone_number, userId],
-      (err, results) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ error: "Database error", details: err.sqlMessage });
-        }
-
-        if (results.length > 0) {
-          return res.status(400).json({ error: "User already exists!" });
-        }
-
-        //  Insert User Data
-        const sql = `
-              INSERT INTO iyfdashboardAccounts (user_id, name, email, phone_number, password, textpassword, role)
-              VALUES (?, ?, ?, ?, ?, ?, ?)
-          `;
-
-        db.query(
-          sql,
-          [userId, name, email, phone_number, hashedPassword, password, role],
-          (err, result) => {
-            if (err) {
-              return res
-                .status(500)
-                .json({ error: "Database error", details: err.sqlMessage });
-            }
-
-            //  Ensure response is sent
-            return res.status(201).json({
-              message: "User registered successfully",
-              userId: userId,
-            });
-          }
-        );
+    const checkDuplicateQuery = `
+      SELECT * FROM iyfdashboardAccounts 
+      WHERE email = ? OR phone_number = ? OR user_id = ?
+    `;
+    db.query(checkDuplicateQuery, [email, phone_number, userId], (err, results) => {
+      if (err) {
+        return res.status(500).json({ error: "Database error", details: err.sqlMessage });
       }
-    );
+
+      if (results.length > 0) {
+        return res.status(400).json({ error: "User already exists!" });
+      }
+
+      const insertQuery = `
+        INSERT INTO iyfdashboardAccounts (user_id, name, email, phone_number, password, textpassword, role)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      db.query(
+        insertQuery,
+        [userId, name, email, phone_number, hashedPassword, password, role],
+        (err, result) => {
+          if (err) {
+            return res.status(500).json({ error: "Database error", details: err.sqlMessage });
+          }
+
+          // Send thank-you email
+          const transporter = nodemailer.createTransport({
+            service: "Gmail",
+            auth: {
+              user: process.env.EMAIL,
+              pass: process.env.EMAIL_PASSWORD,
+            },
+          });
+
+          const mailOptions = {
+            from: '"IYF Dashboard"',
+            to: email,
+            subject: "Welcome to IYF Dashboard",
+            text: `Dear ${name},\n\nThank you for registering on the IYF Dashboard.\n\nYour ID: ${userId}\n\nYour Password: ${password}\n\nRegards,\nTeam IYF`,
+          };
+
+          transporter.sendMail(mailOptions, (emailErr, info) => {
+            if (emailErr) console.error("Email send error:", emailErr);
+            else console.log("Email sent:", info.response);
+          });
+
+          return res.status(201).json({
+            message: "User registered successfully",
+            userId,
+          });
+        }
+      );
+    });
   } catch (error) {
     return res.status(500).json({ error: "Server error" });
   }
