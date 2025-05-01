@@ -96,33 +96,33 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // };
 
 
-const generateRandomDigits = (length = 6) => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+// const generateRandomDigits = (length = 6) => {
+//   return Math.floor(100000 + Math.random() * 900000).toString();
+// };
 
-const generateUserId = async (name) => {
-  const namePart = name.substring(0, 3).toUpperCase().padEnd(3, "X");
-  let userId;
-  let isUnique = false;
+// const generateUserId = async (name) => {
+//   const namePart = name.substring(0, 3).toUpperCase().padEnd(3, "X");
+//   let userId;
+//   let isUnique = false;
 
-  while (!isUnique) {
-    const randomDigits = generateRandomDigits();
-    userId = `${namePart}${randomDigits}`;
-    isUnique = await isUserIdUnique(userId);
-  }
+//   while (!isUnique) {
+//     const randomDigits = generateRandomDigits();
+//     userId = `${namePart}${randomDigits}`;
+//     isUnique = await isUserIdUnique(userId);
+//   }
 
-  return userId;
-};
+//   return userId;
+// };
 
-const isUserIdUnique = (userId) => {
-  return new Promise((resolve, reject) => {
-    const checkSql = "SELECT COUNT(*) as count FROM iyfdashboardAccounts WHERE user_id = ?";
-    db.query(checkSql, [userId], (err, results) => {
-      if (err) return reject(err);
-      resolve(results[0].count === 0);
-    });
-  });
-};
+// const isUserIdUnique = (userId) => {
+//   return new Promise((resolve, reject) => {
+//     const checkSql = "SELECT COUNT(*) as count FROM iyfdashboardAccounts WHERE user_id = ?";
+//     db.query(checkSql, [userId], (err, results) => {
+//       if (err) return reject(err);
+//       resolve(results[0].count === 0);
+//     });
+//   });
+// };
 
 exports.signUp = async (req, res) => {
   const { name, phone_number, email, password, role } = req.body;
@@ -133,7 +133,8 @@ exports.signUp = async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = await generateUserId(name);
+    // const userId = await generateUserId(name);
+    const userId = phone_number;
 
     const checkDuplicateQuery = `
       SELECT * FROM iyfdashboardAccounts 
@@ -227,7 +228,7 @@ exports.login = async (req, res) => {
       const token = jwt.sign(
         { userId: user.user_id, email: user.email, role: user.role },
         JWT_SECRET,
-        { expiresIn: "48h" } // Token Validity
+        { expiresIn: "99h" } // Token Validity
       );
 
       // Send Response
