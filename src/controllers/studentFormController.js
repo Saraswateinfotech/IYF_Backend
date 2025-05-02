@@ -53,7 +53,118 @@ const db = require("../config/db");
 //   });
 // };
 
-//  post - post students
+// //  post - post students
+// exports.saveStudentData = (req, res) => {
+//   debugger;
+
+//   const {
+//     name,
+//     dob,
+//     mobile_number,
+//     frontliner_id,
+//     calling_id,
+//     profession,
+//     address,
+//     class_mode,
+//     payment_mode,
+//     payment_amount,
+//     payment_status,
+//     referral_user_id = null,
+//     chanting_round = 0,
+//     email = null,
+//     photo = null,
+//     rating = 0,
+//     services = null,
+//     city = null,
+//     state = null,
+//     permanent_address = null,
+//     remark = null,
+//     skill = null,
+//     comment = null,
+//     interest = null,
+//     hobby = null,
+//     study_field = null,
+//     father_occupation = null,
+//     father_number = null,
+//     sankalp_camp = 0,
+//     gender = null,
+//     student_status = null,
+//     facilitator_id = null,
+//     razorpay_payment_id = null,
+//   } = req.body;
+
+//   // ✅ Fixed group name (not coming from body)
+//   const fixedGroupName = "new";
+
+//   const getValueOrNull = (value) => {
+//     return value === undefined || value === "" ? null : value;
+//   };
+
+//   const values = [
+//     getValueOrNull(name),
+//     getValueOrNull(dob),
+//     getValueOrNull(mobile_number),
+//     getValueOrNull(frontliner_id),
+//     getValueOrNull(calling_id),
+//     getValueOrNull(profession),
+//     getValueOrNull(address),
+//     getValueOrNull(class_mode),
+//     getValueOrNull(payment_mode),
+//     getValueOrNull(payment_amount),
+//     getValueOrNull(payment_status),
+//     getValueOrNull(referral_user_id),
+//     getValueOrNull(chanting_round),
+//     getValueOrNull(email),
+//     getValueOrNull(photo),
+//     getValueOrNull(rating),
+//     getValueOrNull(services),
+//     getValueOrNull(city),
+//     getValueOrNull(state),
+//     getValueOrNull(permanent_address),
+//     getValueOrNull(remark),
+//     getValueOrNull(skill),
+//     getValueOrNull(comment),
+//     getValueOrNull(interest),
+//     getValueOrNull(hobby),
+//     getValueOrNull(study_field),
+//     getValueOrNull(father_occupation),
+//     getValueOrNull(father_number),
+//     getValueOrNull(sankalp_camp),
+//     getValueOrNull(gender),
+//     getValueOrNull(student_status),
+//     getValueOrNull(facilitator_id),
+//     getValueOrNull(razorpay_payment_id),
+//     getValueOrNull(fixedGroupName),
+//     new Date(),
+//   ];
+
+//   const insertSql = `
+//     INSERT INTO users (
+//       name, dob, mobile_number, frontliner_id, calling_id, profession, address,
+//       class_mode, payment_mode, payment_amount, payment_status, referral_user_id,
+//       chanting_round, email, photo, rating, services, city, state, permanent_address,
+//       remark, skill, comment, interest, hobby, study_field, father_occupation,
+//       father_number, sankalp_camp, gender, student_status, facilitator_id,
+//       razorpay_payment_id, group_name, registration_date
+//     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//   `;
+
+//   db.query(insertSql, values, (err, result) => {
+//     debugger;
+//     if (err) {
+//       console.error("Insert Error:", err);
+//       return res
+//         .status(500)
+//         .json({ error: "Error inserting student data", details: err });
+//     }
+//     res.status(201).json({
+//       message: "Student data saved successfully",
+//       insertedId: result.insertId,
+//     });
+//   });
+// };
+
+// post - post students
 exports.saveStudentData = (req, res) => {
   debugger;
 
@@ -153,13 +264,30 @@ exports.saveStudentData = (req, res) => {
     debugger;
     if (err) {
       console.error("Insert Error:", err);
-      return res
-        .status(500)
-        .json({ error: "Error inserting student data", details: err });
+
+      if (err.code === "ER_DUP_ENTRY") {
+        if (err.sqlMessage.includes('mobile_number')) {
+          return res.status(400).json({
+            error: "Duplicate mobile number",
+            message: "Duplicate mobile number"
+          });
+        } else if (err.sqlMessage.includes('email')) {
+          return res.status(400).json({
+            error: "Duplicate email",
+            message: "Duplicate email"
+          });
+        }
+      }
+
+      return res.status(500).json({
+        error: "Error inserting student data",
+        details: err
+      });
     }
+
     res.status(201).json({
       message: "Student data saved successfully",
-      insertedId: result.insertId,
+      insertedId: result.insertId
     });
   });
 };
