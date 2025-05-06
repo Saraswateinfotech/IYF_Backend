@@ -445,10 +445,10 @@ exports.updateStudentStatus = (req, res) => {
       .json({ message: "user_id and student_status are required" });
   }
 
-  const allowedStatuses = ["will_come", "not_interested", "busy", "might_come"];
-  if (!allowedStatuses.includes(student_status)) {
-    return res.status(400).json({ message: "Invalid student_status value" });
-  }
+  // const allowedStatuses = ["will_come", "not_interested", "busy", "might_come"];
+  // if (!allowedStatuses.includes(student_status)) {
+  //   return res.status(400).json({ message: "Invalid student_status value" });
+  // }
 
   const currentDate = new Date(); // Get current date-time
 

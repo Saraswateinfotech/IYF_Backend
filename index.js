@@ -7,6 +7,7 @@
     const batchRoutes = require("./src/routes/batchRoutes");
     const attendanceRoutes = require("./src/routes/attendanceRoutes");
     const migrationRoutes = require("./src/routes/migrationRoutes");
+    const taskRoutes = require("./src/routes/taskRoutes");
     const db = require("./src/config/db");
 
 
@@ -27,6 +28,7 @@
     app.use("/batch", batchRoutes);
     app.use("/attendance", attendanceRoutes);
     app.use("/groupMigration", migrationRoutes);
+    app.use("/task", taskRoutes);
 
 
     app.get('/', (req, res) => {
