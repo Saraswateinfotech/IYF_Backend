@@ -174,3 +174,28 @@ exports.toggleTaskStatus = (req, res) => {
   });
 };
 
+// Delete all completed tasks for a user
+exports.deleteCompletedTasks = (req, res) => {
+  const { user_id } = req.params;
+
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  const deleteQuery = `
+    DELETE FROM tasks 
+    WHERE user_id = ? AND status = 'completed'
+  `;
+
+  db.query(deleteQuery, [user_id], (err, results) => {
+    if (err) {
+      console.error("Error deleting completed tasks:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
+    return res.status(200).json({ 
+      message: "Completed tasks deleted successfully",
+      deleted_count: results.affectedRows 
+    });
+  });
+};
