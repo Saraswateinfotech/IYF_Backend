@@ -544,7 +544,7 @@ exports.frontlinerStudentByIdOfcallingId = (req, res) => {
     }
 
     if (result.length === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         message: "No users found for the given frontliner_id in calling_id",
       });
     }
