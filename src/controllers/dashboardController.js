@@ -36,3 +36,16 @@ exports.getFrontlinerdetailReport =(req, res) => {
         res.json(results[0]);  // Return the results of the stored procedure
     });
 };
+
+
+
+exports.getAllFrontlinerReports = (req, res) => {
+    db.query('CALL sp_get_all_frontliner_report()', (err, results) => {
+        if (err) {
+            console.error('Error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results[0]);  
+    });
+};
+
