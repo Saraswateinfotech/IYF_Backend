@@ -214,17 +214,96 @@ exports.getFrontlinerdetailReport = (req, res) => {
   const yearParam  = selectedYear != null && selectedYear !== "" ? selectedYear : null;
   const monthParam = selectedMonth != null && selectedMonth !== "" ? selectedMonth : null;
 
-  db.query(
-    "CALL progressReportGroupWise(?, ?, ?, ?, ?)",
-    [sessionName, yearParam, monthParam, facilitatorId, groupPrefix],
-    (err, results) => {
-      if (err) {
-        console.error("Error calling progressReportGroupWise:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
-      res.json(results[0]);
+  const query = `
+    WITH
+      migration_dates AS (
+        SELECT
+          m.devoteeId,
+          MIN(m.migrationDateTime) AS joined_date
+        FROM group_migration AS m
+        WHERE m.currentGroup = ?
+        GROUP BY m.devoteeId
+      ),
+      students AS (
+        SELECT
+          u.user_id,
+          u.name,
+          u.mobile_number,
+          u.chanting_round,
+          u.facilitatorId
+        FROM users AS u
+        WHERE u.facilitatorId = ?
+          AND u.group_name LIKE CONCAT(?, '%')
+      ),
+      dates AS (
+        SELECT DISTINCT DATE(AttendanceDate) AS class_date
+        FROM studentAttendance
+        WHERE AttendanceSession = ?
+          AND YEAR(AttendanceDate)  = ?
+          AND MONTH(AttendanceDate) = ?
+      )
+    SELECT
+      s.user_id        AS student_id,
+      s.name           AS student_name,
+      s.mobile_number,
+      s.chanting_round,
+      s.facilitatorId,
+      CAST(
+        CASE
+          WHEN SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END) = 0
+            AND COUNT(DISTINCT CASE WHEN d.class_date >= DATE(md.joined_date) THEN d.class_date ELSE NULL END) = 0
+          THEN '-'
+          
+          WHEN COUNT(DISTINCT CASE WHEN d.class_date >= DATE(md.joined_date) THEN d.class_date ELSE NULL END) = 0
+            AND SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END) > 0
+          THEN CONCAT_WS('/',
+            SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END),
+            SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END)
+          )
+
+          ELSE CONCAT_WS('/',
+            SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END),
+            COUNT(DISTINCT CASE WHEN d.class_date >= DATE(md.joined_date) THEN d.class_date ELSE NULL END)
+          )
+        END AS CHAR(10)
+      ) AS GroupRatio
+    FROM students AS s
+    LEFT JOIN migration_dates AS md ON md.devoteeId = s.user_id
+    LEFT JOIN dates AS d ON 1 = 1
+    LEFT JOIN studentAttendance AS sa
+      ON sa.StudentId            = s.user_id
+     AND DATE(sa.AttendanceDate) = d.class_date
+     AND sa.AttendanceSession    = ?
+    GROUP BY
+      s.user_id,
+      s.name,
+      s.mobile_number,
+      s.chanting_round,
+      s.facilitatorId
+    ORDER BY s.name;
+  `;
+
+  const params = [
+    groupPrefix,   
+    facilitatorId,    
+    groupPrefix,      
+    sessionName,     
+    yearParam,
+    monthParam,
+    sessionName
+  ];
+
+  db.query(query, params, (err, result) => {
+    if (err) {
+      console.error("Error executing getFrontlinerdetailReport:", err);
+      return res.status(500).json({ error: "Database error", details: err });
     }
-  );
+
+    res.status(200).json({
+      message: "Frontliner detail report fetched successfully",
+      data: result,
+    });
+  });
 };
 
 
