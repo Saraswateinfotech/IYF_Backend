@@ -299,10 +299,7 @@ exports.getFrontlinerdetailReport = (req, res) => {
       return res.status(500).json({ error: "Database error", details: err });
     }
 
-    res.status(200).json({
-      message: "Frontliner detail report fetched successfully",
-      data: result,
-    });
+    res.status(200).json(result);
   });
 };
 
