@@ -27,6 +27,25 @@ exports.markAttendance = (req, res) => {
     updatedSession = groupShiftMap[AttendanceSession] || AttendanceSession;
   }
 
+  const checkQuery = `
+  SELECT 1 FROM studentAttendance 
+  WHERE DATE(AttendanceDate) = CURDATE() 
+    AND AttendanceSession = ? 
+    AND StudentId = ?
+  LIMIT 1
+`;
+
+db.query(checkQuery, [updatedSession, StudentId], (checkErr, checkResult) => {
+  if (checkErr) {
+    console.error("Error checking attendance:", checkErr);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+  
+  if (checkResult.length > 0) {
+    // Attendance already exists for this date, session, and student
+    return res.status(400).json({ message: "Attendance already marked for this session today." });
+  } else {
+
   // Step 3: Insert into studentAttendance
   const attendanceQuery = `
     INSERT INTO studentAttendance (AttendanceDate, AttendanceSession, StudentId)
@@ -115,6 +134,7 @@ exports.markAttendance = (req, res) => {
       );
     }
   });
+}
 };
 
 exports.updateStudentGroupWise = (req, res) => {
