@@ -27,6 +27,24 @@ exports.markAttendance = (req, res) => {
     updatedSession = groupShiftMap[AttendanceSession] || AttendanceSession;
   }
 
+  const checkQuery = `
+  SELECT 1 FROM studentAttendance 
+  WHERE DATE(AttendanceDate) = CURDATE() 
+    AND AttendanceSession = ? 
+    AND StudentId = ?
+  LIMIT 1
+`;
+
+db.query(checkQuery, [updatedSession, StudentId], (checkErr, checkResult) => {
+  if (checkErr) {
+    console.error("Error checking attendance:", checkErr);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+  
+  if (checkResult.length > 0) {
+    // Attendance already exists for this date, session, and student
+    return res.status(400).json({ message: "Attendance already marked for this session today." });
+  } else {
   // Step 3: Insert into studentAttendance
   const attendanceQuery = `
     INSERT INTO studentAttendance (AttendanceDate, AttendanceSession, StudentId)
@@ -115,6 +133,7 @@ exports.markAttendance = (req, res) => {
       );
     }
   });
+}
 };
 
 exports.updateStudentGroupWise = (req, res) => {
@@ -214,17 +233,93 @@ exports.getFrontlinerdetailReport = (req, res) => {
   const yearParam  = selectedYear != null && selectedYear !== "" ? selectedYear : null;
   const monthParam = selectedMonth != null && selectedMonth !== "" ? selectedMonth : null;
 
-  db.query(
-    "CALL progressReportGroupWise(?, ?, ?, ?, ?)",
-    [sessionName, yearParam, monthParam, facilitatorId, groupPrefix],
-    (err, results) => {
-      if (err) {
-        console.error("Error calling progressReportGroupWise:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
-      res.json(results[0]);
+  const query = `
+    WITH
+      migration_dates AS (
+        SELECT
+          m.devoteeId,
+          MIN(m.migrationDateTime) AS joined_date
+        FROM group_migration AS m
+        WHERE m.currentGroup = ?
+        GROUP BY m.devoteeId
+      ),
+      students AS (
+        SELECT
+          u.user_id,
+          u.name,
+          u.mobile_number,
+          u.chanting_round,
+          u.facilitatorId
+        FROM users AS u
+        WHERE u.facilitatorId = ?
+          AND u.group_name LIKE CONCAT(?, '%')
+      ),
+      dates AS (
+        SELECT DISTINCT DATE(AttendanceDate) AS class_date
+        FROM studentAttendance
+        WHERE AttendanceSession = ?
+          AND YEAR(AttendanceDate)  = ?
+          AND MONTH(AttendanceDate) = ?
+      )
+    SELECT
+      s.user_id        AS student_id,
+      s.name           AS student_name,
+      s.mobile_number,
+      s.chanting_round,
+      s.facilitatorId,
+      CAST(
+        CASE
+          WHEN SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END) = 0
+            AND COUNT(DISTINCT CASE WHEN d.class_date >= DATE(md.joined_date) THEN d.class_date ELSE NULL END) = 0
+          THEN '-'
+          
+          WHEN COUNT(DISTINCT CASE WHEN d.class_date >= DATE(md.joined_date) THEN d.class_date ELSE NULL END) = 0
+            AND SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END) > 0
+          THEN CONCAT_WS('/',
+            SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END),
+            SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END)
+          )
+
+          ELSE CONCAT_WS('/',
+            SUM(CASE WHEN sa.StudentId IS NOT NULL THEN 1 ELSE 0 END),
+            COUNT(DISTINCT CASE WHEN d.class_date >= DATE(md.joined_date) THEN d.class_date ELSE NULL END)
+          )
+        END AS CHAR(10)
+      ) AS GroupRatio
+    FROM students AS s
+    LEFT JOIN migration_dates AS md ON md.devoteeId = s.user_id
+    LEFT JOIN dates AS d ON 1 = 1
+    LEFT JOIN studentAttendance AS sa
+      ON sa.StudentId            = s.user_id
+     AND DATE(sa.AttendanceDate) = d.class_date
+     AND sa.AttendanceSession    = ?
+    GROUP BY
+      s.user_id,
+      s.name,
+      s.mobile_number,
+      s.chanting_round,
+      s.facilitatorId
+    ORDER BY s.name;
+  `;
+
+  const params = [
+    groupPrefix,   
+    facilitatorId,    
+    groupPrefix,      
+    sessionName,     
+    yearParam,
+    monthParam,
+    sessionName
+  ];
+
+  db.query(query, params, (err, result) => {
+    if (err) {
+      console.error("Error executing getFrontlinerdetailReport:", err);
+      return res.status(500).json({ error: "Database error", details: err });
     }
-  );
+
+    res.status(200).json(result);
+  });
 };
 
 
@@ -248,83 +343,97 @@ exports.getStudentReport = (req, res) => {
   const { groupName, month, year } = req.body;
 
   const getStudentReportQuery = `
-    WITH
-      -- 1) all class dates in the given month/year for the specified session
+      WITH
+      -- 1) All class dates
       class_dates AS (
-        SELECT DISTINCT
-          DATE(sa.AttendanceDate) AS class_date
+        SELECT DISTINCT DATE(sa.AttendanceDate) AS class_date
         FROM studentAttendance sa
         WHERE sa.AttendanceSession = ?
           AND MONTH(sa.AttendanceDate) = ?
           AND YEAR(sa.AttendanceDate) = ?
       ),
 
-      -- 2) all facilitators in that group + their total student count
-      facilitators AS (
+      -- 2) Students with migration date if any
+      user_migrations AS (
         SELECT
+          u.user_id,
           u.facilitatorId,
-          ida.name         AS facilitator_name,
-          ida.phone_number,
-          COUNT(*)         AS total_students
+          gm.migrationDateTime
         FROM users u
-        JOIN iyfdashboardAccounts ida
-          ON u.facilitatorId = ida.user_id
+        LEFT JOIN group_migration gm
+          ON gm.devoteeId = u.user_id
+        AND gm.currentGroup = ?
         WHERE u.group_name = ?
-        GROUP BY
-          u.facilitatorId,
-          ida.name,
-          ida.phone_number
       ),
 
-      -- 3) raw attendance counts per facilitator × date
+      -- 3) Facilitator wise date-wise student count
+      facilitator_students_by_date AS (
+        SELECT
+          cd.class_date,
+          um.facilitatorId,
+          COUNT(DISTINCT um.user_id) AS total_students
+        FROM class_dates cd
+        JOIN user_migrations um
+          ON (um.migrationDateTime IS NULL OR DATE(um.migrationDateTime) <= cd.class_date)
+        GROUP BY cd.class_date, um.facilitatorId
+      ),
+
+      -- 4) Attendance count per facilitator per date
       attendance_raw AS (
         SELECT
-          u.facilitatorId,
           DATE(sa.AttendanceDate) AS class_date,
+          u.facilitatorId,
           COUNT(DISTINCT sa.StudentId) AS attendance_count
-        FROM users u
-        JOIN studentAttendance sa
-          ON u.user_id = sa.StudentId
+        FROM studentAttendance sa
+        JOIN users u ON u.user_id = sa.StudentId
         LEFT JOIN group_migration gm
-          ON gm.devoteeId    = u.user_id
-         AND gm.priviousGroup = ?
+          ON gm.devoteeId = u.user_id
+        AND gm.currentGroup = ?
         WHERE u.group_name = ?
+          AND sa.AttendanceSession = ?
           AND MONTH(sa.AttendanceDate) = ?
           AND YEAR(sa.AttendanceDate) = ?
-          AND (gm.migrationDateTime IS NULL
-               OR sa.AttendanceDate < gm.migrationDateTime)
-        GROUP BY
+          AND (gm.migrationDateTime IS NULL OR sa.AttendanceDate >= gm.migrationDateTime)
+        GROUP BY DATE(sa.AttendanceDate), u.facilitatorId
+      ),
+
+      -- 5) Facilitator detail
+      facilitator_info AS (
+        SELECT DISTINCT
           u.facilitatorId,
-          DATE(sa.AttendanceDate)
+          ida.name         AS facilitator_name,
+          ida.phone_number
+        FROM users u
+        JOIN iyfdashboardAccounts ida ON u.facilitatorId = ida.user_id
+        WHERE u.group_name = ?
       )
 
-    -- 4) build the full facilitator × date grid, fill missing with zero
+    -- 6) Final Output
     SELECT
-      f.facilitatorId,
-      f.facilitator_name,
-      f.phone_number,
       cd.class_date,
+      fi.facilitatorId,
+      fi.facilitator_name,
+      fi.phone_number,
+      COALESCE(fsbd.total_students, 0) AS total_students,
       COALESCE(ar.attendance_count, 0) AS attendance_count,
-      f.total_students,
       CONCAT(
         COALESCE(ar.attendance_count, 0),
         '/',
-        f.total_students
+        COALESCE(fsbd.total_students, 0)
       ) AS attendance_ratio
-    FROM facilitators f
-    CROSS JOIN class_dates cd
+    FROM class_dates cd
+    CROSS JOIN facilitator_info fi
+    LEFT JOIN facilitator_students_by_date fsbd
+      ON fsbd.facilitatorId = fi.facilitatorId AND fsbd.class_date = cd.class_date
     LEFT JOIN attendance_raw ar
-      ON ar.facilitatorId = f.facilitatorId
-     AND ar.class_date     = cd.class_date
-    ORDER BY
-      cd.class_date,
-      f.facilitatorId;
+      ON ar.facilitatorId = fi.facilitatorId AND ar.class_date = cd.class_date
+    ORDER BY cd.class_date, fi.facilitatorId;
   `;
 
-  // parameters: [session, month, year, groupName, groupName, groupName, month, year]
+  // parameters: [groupName, month, year, groupName, groupName, groupName, groupName, groupName, month, year, groupName]
   db.query(
     getStudentReportQuery,
-    [groupName, month, year, groupName, groupName, groupName, month, year],
+    [groupName, month, year, groupName, groupName, groupName, groupName, groupName, month, year, groupName],
     (err, result) => {
       if (err) {
         console.error("Error fetching student report:", err);
